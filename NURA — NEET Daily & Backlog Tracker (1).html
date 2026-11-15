@@ -1,0 +1,1611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0F172A" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="NURA" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0%25' stop-color='%236366F1'/%3E%3Cstop offset='100%25' stop-color='%23EC4899'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='18' fill='url(%23g)'/%3E%3Ctext x='32' y='43' text-anchor='middle' font-family='sans-serif' font-weight='800' font-size='34' fill='white'%3EN%3C/text%3E%3C/svg%3E" />
+  <title>NURA — NEET Daily &amp; Backlog Tracker</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .task-checkbox:checked + span {
+      text-decoration: line-through;
+      color: #64748b;
+    }
+    .tab-panel.hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-900 min-h-screen antialiased pb-24 sm:pb-8">
+  <!-- PW + NEET App Top Bar -->
+  <header class="sticky top-0 z-30 bg-slate-900 text-white shadow-md">
+    <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+      <div class="flex items-center gap-3 min-w-0">
+        <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-lg ring-2 ring-white/20 shrink-0">
+          <svg viewBox="0 0 24 24" class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 19V5l14 14V5" />
+          </svg>
+        </div>
+        <div class="min-w-0">
+          <div class="flex items-center gap-2">
+            <h1 class="text-lg sm:text-xl font-extrabold tracking-widest bg-gradient-to-r from-indigo-300 via-purple-200 to-pink-300 bg-clip-text text-transparent truncate">
+              NURA
+            </h1>
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-white/10 text-slate-200 border border-white/15">
+              NEET
+            </span>
+          </div>
+          <p class="text-[11px] text-slate-400 truncate">Daily Targets &bull; Routine &bull; Backlog</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 shrink-0">
+        <span id="streak-badge" class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-amber-400/15 text-amber-300 border border-amber-400/30">
+          0 Day Streak
+        </span>
+        <button id="quick-backup-btn" type="button" title="Save all data to Downloads" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500 hover:bg-emerald-600 text-white transition shadow-sm">
+          <span>&#8681; Save</span>
+        </button>
+        <button id="quick-pdf-btn" type="button" title="Download Monthly PDF Report" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-rose-500 hover:bg-rose-600 text-white transition shadow-sm">
+          <span>PDF</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Desktop Navigation Tabs -->
+    <nav class="hidden sm:block border-t border-slate-800 bg-slate-900/95">
+      <div class="max-w-4xl mx-auto px-4 flex gap-2 py-2">
+        <button type="button" data-tab="today" class="nav-tab-btn px-4 py-1.5 rounded-lg text-xs font-semibold transition bg-indigo-600 text-white">Today's Tasks</button>
+        <button type="button" data-tab="backlog" class="nav-tab-btn px-4 py-1.5 rounded-lg text-xs font-semibold transition text-slate-300 hover:bg-slate-800">Backlogs</button>
+        <button type="button" data-tab="calendar" class="nav-tab-btn px-4 py-1.5 rounded-lg text-xs font-semibold transition text-slate-300 hover:bg-slate-800">Calendar</button>
+        <button type="button" data-tab="analytics" class="nav-tab-btn px-4 py-1.5 rounded-lg text-xs font-semibold transition text-slate-300 hover:bg-slate-800">Study Graph &amp; Backup</button>
+      </div>
+    </nav>
+  </header>
+
+  <main class="max-w-4xl mx-auto px-4 py-5 space-y-5">
+    <!-- TAB 1: TODAY -->
+    <div id="tab-today" class="tab-panel space-y-5">
+      <!-- Date Bar + Daily Progress Card -->
+      <section class="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <span class="text-[11px] font-bold uppercase tracking-wider text-indigo-600">Selected Date</span>
+            <h2 id="selected-date-label" class="text-base sm:text-lg font-bold text-slate-900">Today</h2>
+          </div>
+
+          <div class="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl self-start sm:self-auto">
+            <button id="prev-day-btn" type="button" aria-label="Previous day" class="px-3 py-1.5 rounded-lg bg-white text-slate-700 hover:bg-slate-50 border border-slate-200 text-sm font-semibold transition">
+              &larr;
+            </button>
+            <input id="date-picker" type="date" class="bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            <button id="next-day-btn" type="button" aria-label="Next day" class="px-3 py-1.5 rounded-lg bg-white text-slate-700 hover:bg-slate-50 border border-slate-200 text-sm font-semibold transition">
+              &rarr;
+            </button>
+            <button id="today-btn" type="button" class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 text-xs font-bold transition">
+              Today
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between gap-2 mb-1.5">
+            <span class="text-xs font-semibold text-slate-500">Daily Target Completion</span>
+            <span id="daily-progress-text" class="text-xs font-bold text-indigo-700">0 / 12 Completed (0%)</span>
+          </div>
+          <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+            <div id="daily-progress-bar" class="bg-gradient-to-r from-indigo-600 to-emerald-500 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Subjects Grid -->
+      <section id="subjects-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- Populated by JS -->
+      </section>
+
+      <!-- Add New Subject -->
+      <form id="add-subject-form" class="bg-white rounded-2xl border border-slate-200 p-3.5 shadow-sm flex flex-col sm:flex-row gap-2">
+        <input id="new-subject-name" type="text" placeholder="+ Naya Subject add karein (e.g., Organic Chem, Mock Test)..." class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500" required />
+        <button type="submit" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-bold transition whitespace-nowrap">
+          + Add Subject
+        </button>
+      </form>
+
+      <!-- Daily Routine & Effective Study Hours -->
+      <section class="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div>
+            <h2 class="text-base sm:text-lg font-bold text-slate-900">Daily Routine &amp; Effective Hours</h2>
+            <p class="text-xs text-slate-500">Uthne, library aane-jaane, padhai band karne ka time aur effective ghante tick karein.</p>
+          </div>
+          <span id="routine-stats" class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 self-start sm:self-auto">
+            0 / 5 Ticked &bull; 0 hrs
+          </span>
+        </div>
+
+        <div id="routine-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <!-- Populated by JS -->
+        </div>
+
+        <form id="add-routine-form" class="flex flex-col sm:flex-row gap-2 pt-2 border-t border-slate-100">
+          <input id="new-routine-label" type="text" placeholder="+ Naya routine item likhein (e.g., Afternoon Nap, Test)..." class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500" required />
+          <select id="new-routine-type" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <option value="time">Time Input</option>
+            <option value="number">Hours / Number</option>
+            <option value="check">Only Tick</option>
+          </select>
+          <button type="submit" class="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition whitespace-nowrap">
+            + Add Routine
+          </button>
+        </form>
+      </section>
+    </div>
+
+    <!-- TAB 2: BACKLOG -->
+    <div id="tab-backlog" class="tab-panel hidden space-y-5">
+      <section class="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div>
+            <h2 class="text-lg font-bold text-slate-900">Backlog Tracker</h2>
+            <p class="text-xs text-slate-500">Jo topic ya lecture chhoot gaya ho use add karein, aur complete hone par tick karein.</p>
+          </div>
+          <span id="backlog-stats" class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200 self-start sm:self-auto">
+            0 Pending &bull; 0 Done
+          </span>
+        </div>
+
+        <!-- Add Backlog Form -->
+        <form id="backlog-form" class="flex flex-col sm:flex-row gap-2">
+          <select id="backlog-subject" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <option value="Physics">Physics</option>
+            <option value="Chemistry">Chemistry</option>
+            <option value="Zoology">Zoology</option>
+            <option value="Botany">Botany</option>
+          </select>
+          <input id="backlog-input" type="text" placeholder="e.g., Electrostatics DPP 3 ya NCERT Ch-4 reading..." class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500" required />
+          <button type="submit" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold transition whitespace-nowrap shadow-sm">
+            + Add Backlog
+          </button>
+        </form>
+
+        <!-- Backlog Filter -->
+        <div class="flex items-center gap-2 text-xs font-semibold">
+          <button type="button" data-filter="all" class="filter-btn px-3 py-1.5 rounded-lg bg-slate-900 text-white transition">All</button>
+          <button type="button" data-filter="pending" class="filter-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition">Pending</button>
+          <button type="button" data-filter="done" class="filter-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition">Completed</button>
+        </div>
+
+        <!-- Backlog Items -->
+        <ul id="backlog-list" class="space-y-2">
+          <!-- Populated by JS -->
+        </ul>
+        <p id="backlog-empty" class="text-sm text-slate-400 text-center py-6 hidden">
+          Abhi koi backlog nahi hai. Badhiya chal raha hai!
+        </p>
+      </section>
+    </div>
+
+    <!-- TAB 3: CALENDAR -->
+    <div id="tab-calendar" class="tab-panel hidden space-y-5">
+      <section class="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-4">
+        <div class="flex items-center justify-between gap-2">
+          <div>
+            <h2 class="text-lg font-bold text-slate-900">Monthly Calendar</h2>
+            <p class="text-xs text-slate-500">Kisi bhi date par tap karke us din ke tasks dekhein.</p>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <button id="prev-month-btn" type="button" aria-label="Previous month" class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-bold transition">&larr;</button>
+            <span id="calendar-month-label" class="text-sm font-bold text-slate-800 min-w-[115px] text-center">Month</span>
+            <button id="next-month-btn" type="button" aria-label="Next month" class="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-bold transition">&rarr;</button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-7 gap-1 text-center text-[11px] font-bold text-slate-400 uppercase">
+          <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+        </div>
+        <div id="calendar-grid" class="grid grid-cols-7 gap-1.5">
+          <!-- Populated by JS -->
+        </div>
+
+        <div class="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-100 text-xs text-slate-600">
+          <div class="flex items-center gap-3">
+            <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>All Done</span>
+            <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>Partial</span>
+            <span class="inline-flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-slate-200"></span>0 Done</span>
+          </div>
+          <span id="month-summary-badge" class="font-bold text-indigo-700">0 hrs this month</span>
+        </div>
+      </section>
+    </div>
+
+    <!-- TAB 4: ANALYTICS & BACKUP -->
+    <div id="tab-analytics" class="tab-panel hidden space-y-5">
+      <section class="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-4">
+        <div class="flex items-start justify-between gap-2">
+          <div>
+            <h2 class="text-lg font-bold text-slate-900">Effective Study Hours vs Date</h2>
+            <p class="text-xs text-slate-500">Effective Padhai tick karne par graph automatic update hota hai.</p>
+          </div>
+          <span id="chart-avg-badge" class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap">
+            Avg: 0 hrs/day
+          </span>
+        </div>
+        <div class="relative h-72 w-full">
+          <canvas id="hours-chart"></canvas>
+        </div>
+      </section>
+
+      <!-- Backup & Restore -->
+      <footer class="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div class="text-xs text-slate-500">
+          <span class="font-bold text-slate-800 block text-sm mb-0.5">Data Backup &amp; Restore</span>
+          Apna saara data (tasks, routine, backlog) ek tap mein Downloads mein save karein.
+          <span id="last-backup-label" class="block mt-0.5 text-[11px] font-medium text-slate-400">Last backup: Never</span>
+          <span id="backup-status" class="inline-block mt-0.5 text-emerald-700 font-semibold"></span>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <button id="pdf-btn" type="button" class="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition">
+            Download PDF
+          </button>
+          <button id="export-btn" type="button" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition">
+            Export Backup
+          </button>
+          <label class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition cursor-pointer">
+            Import Backup
+            <input id="import-input" type="file" accept=".json,application/json" class="hidden" />
+          </label>
+        </div>
+      </footer>
+    </div>
+  </main>
+
+  <!-- Mobile Bottom Navigation Bar (PW / App style) -->
+  <nav class="sm:hidden fixed bottom-0 inset-x-0 z-30 bg-white border-t border-slate-200 px-2 py-1.5 shadow-[0_-4px_12px_rgba(15,23,42,0.06)]">
+    <div class="grid grid-cols-4 gap-1">
+      <button type="button" data-tab="today" class="mobile-tab-btn flex flex-col items-center justify-center py-1.5 rounded-xl text-[11px] font-bold text-indigo-600 bg-indigo-50">
+        <span>Today</span>
+      </button>
+      <button type="button" data-tab="backlog" class="mobile-tab-btn flex flex-col items-center justify-center py-1.5 rounded-xl text-[11px] font-semibold text-slate-500">
+        <span>Backlog</span>
+      </button>
+      <button type="button" data-tab="calendar" class="mobile-tab-btn flex flex-col items-center justify-center py-1.5 rounded-xl text-[11px] font-semibold text-slate-500">
+        <span>Calendar</span>
+      </button>
+      <button type="button" data-tab="analytics" class="mobile-tab-btn flex flex-col items-center justify-center py-1.5 rounded-xl text-[11px] font-semibold text-slate-500">
+        <span>Graph</span>
+      </button>
+    </div>
+  </nav>
+
+  <script>
+    const PHY_CHEM_TASKS = [
+      { id: 'prev_rev', label: 'Previous Lec. Rev.' },
+      { id: 'live_lec', label: 'Live Lec.' },
+      { id: 'dpp', label: 'DPP' },
+      { id: 'hw', label: 'HW' }
+    ];
+
+    const BIO_TASKS = [
+      { id: 'prev_rev', label: 'Previous Lec. Rev.' },
+      { id: 'live_lec', label: 'Live Lec.' },
+      { id: 'dpp', label: 'DPP' },
+      { id: 'hw', label: 'HW' },
+      { id: 'ncert', label: 'NCERT Reading' }
+    ];
+
+    const COLOR_PRESETS = [
+      { badge: 'bg-blue-50 text-blue-700 border border-blue-200', border: 'border-t-blue-600' },
+      { badge: 'bg-violet-50 text-violet-700 border border-violet-200', border: 'border-t-violet-600' },
+      { badge: 'bg-emerald-50 text-emerald-700 border border-emerald-200', border: 'border-t-emerald-600' },
+      { badge: 'bg-teal-50 text-teal-700 border border-teal-200', border: 'border-t-teal-600' },
+      { badge: 'bg-rose-50 text-rose-700 border border-rose-200', border: 'border-t-rose-600' },
+      { badge: 'bg-amber-50 text-amber-800 border border-amber-200', border: 'border-t-amber-500' }
+    ];
+
+    const DEFAULT_SUBJECTS = [
+      { id: 'physics', name: 'Physics', badge: COLOR_PRESETS[0].badge, border: COLOR_PRESETS[0].border, defaultTasks: PHY_CHEM_TASKS },
+      { id: 'chemistry', name: 'Chemistry', badge: COLOR_PRESETS[1].badge, border: COLOR_PRESETS[1].border, defaultTasks: PHY_CHEM_TASKS },
+      { id: 'zoology', name: 'Zoology', badge: COLOR_PRESETS[2].badge, border: COLOR_PRESETS[2].border, defaultTasks: BIO_TASKS },
+      { id: 'botany', name: 'Botany', badge: COLOR_PRESETS[3].badge, border: COLOR_PRESETS[3].border, defaultTasks: BIO_TASKS }
+    ];
+
+    const DEFAULT_ROUTINE_ITEMS = [
+      { id: 'wake', label: 'Uthna (Wake Up)', type: 'time' },
+      { id: 'lib_in', label: 'Ghar se Library', type: 'time' },
+      { id: 'lib_out', label: 'Library se Ghar', type: 'time' },
+      { id: 'lib_in_2', label: 'Ghar se Library (2)', type: 'time' },
+      { id: 'study_end', label: 'Padhai Band', type: 'time' },
+      { id: 'effective_hrs', label: 'Effective Padhai (Hrs)', type: 'number' }
+    ];
+
+    const STORAGE_KEY = 'neet_tracker_v1';
+
+    function getLocalTodayISO() {
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = String(now.getMonth() + 1).padStart(2, '0');
+      const d = String(now.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          return {
+            dailyTasks: parsed.dailyTasks || {},
+            dailyRoutine: parsed.dailyRoutine || {},
+            backlogs: Array.isArray(parsed.backlogs) ? parsed.backlogs : [],
+            subjectTasks: parsed.subjectTasks || null,
+            routineItems: Array.isArray(parsed.routineItems) ? parsed.routineItems : null,
+            activeSubjects: parsed.activeSubjects || {},
+            subjects: Array.isArray(parsed.subjects) ? parsed.subjects : null,
+            taskTimes: parsed.taskTimes || {},
+            subjectTimes: parsed.subjectTimes || {},
+            lastBackupAt: parsed.lastBackupAt || null
+          };
+        }
+      } catch (e) {
+        // Fallback if localStorage is blocked
+      }
+      return { dailyTasks: {}, dailyRoutine: {}, backlogs: [], subjectTasks: null, routineItems: null, activeSubjects: {}, subjects: null, taskTimes: {}, subjectTimes: {}, lastBackupAt: null };
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      } catch (e) {
+        // Ignore storage errors
+      }
+    }
+
+    let state = loadState();
+    let selectedDate = getLocalTodayISO();
+    let viewYear = Number(selectedDate.slice(0, 4));
+    let viewMonth = Number(selectedDate.slice(5, 7)) - 1;
+    let backlogFilter = 'all';
+    let activeTab = 'today';
+    let editingTask = null; // { subjectId, taskId }
+    let editingRoutineId = null;
+    let editingSubjectId = null;
+
+    function getSubjects() {
+      if (!Array.isArray(state.subjects)) {
+        state.subjects = DEFAULT_SUBJECTS.map(s => ({ id: s.id, name: s.name, badge: s.badge, border: s.border }));
+      }
+      return state.subjects;
+    }
+
+    function getRoutineItems() {
+      if (!Array.isArray(state.routineItems)) {
+        state.routineItems = DEFAULT_ROUTINE_ITEMS.map(item => ({ ...item }));
+      }
+      return state.routineItems;
+    }
+
+    function isSubjectActive(dateIso, subjectId) {
+      if (!state.activeSubjects) state.activeSubjects = {};
+      if (!state.activeSubjects[dateIso] || typeof state.activeSubjects[dateIso][subjectId] !== 'boolean') {
+        return true;
+      }
+      return state.activeSubjects[dateIso][subjectId];
+    }
+
+    function setSubjectActive(dateIso, subjectId, active) {
+      if (!state.activeSubjects) state.activeSubjects = {};
+      if (!state.activeSubjects[dateIso]) state.activeSubjects[dateIso] = {};
+      state.activeSubjects[dateIso][subjectId] = active;
+      saveState();
+      renderDaily();
+    }
+
+    function getDefaultSubjectTasks() {
+      const map = {};
+      getSubjects().forEach(sub => {
+        const def = DEFAULT_SUBJECTS.find(d => d.id === sub.id);
+        const base = def ? def.defaultTasks : PHY_CHEM_TASKS;
+        map[sub.id] = base.map(t => ({ ...t }));
+      });
+      return map;
+    }
+
+    function getSubjectTasks(subjectId) {
+      if (!state.subjectTasks) {
+        state.subjectTasks = getDefaultSubjectTasks();
+      }
+      if (!Array.isArray(state.subjectTasks[subjectId])) {
+        const subDef = DEFAULT_SUBJECTS.find(s => s.id === subjectId);
+        const base = subDef ? subDef.defaultTasks : PHY_CHEM_TASKS;
+        state.subjectTasks[subjectId] = base.map(t => ({ ...t }));
+      }
+      return state.subjectTasks[subjectId];
+    }
+    let hoursChart = null;
+
+    const datePicker = document.getElementById('date-picker');
+    const selectedDateLabel = document.getElementById('selected-date-label');
+    const dailyProgressText = document.getElementById('daily-progress-text');
+    const dailyProgressBar = document.getElementById('daily-progress-bar');
+    const subjectsGrid = document.getElementById('subjects-grid');
+    const addSubjectForm = document.getElementById('add-subject-form');
+    const newSubjectName = document.getElementById('new-subject-name');
+    const routineGrid = document.getElementById('routine-grid');
+    const routineStats = document.getElementById('routine-stats');
+    const addRoutineForm = document.getElementById('add-routine-form');
+    const newRoutineLabel = document.getElementById('new-routine-label');
+    const newRoutineType = document.getElementById('new-routine-type');
+    const calendarMonthLabel = document.getElementById('calendar-month-label');
+    const calendarGrid = document.getElementById('calendar-grid');
+    const monthSummaryBadge = document.getElementById('month-summary-badge');
+    const chartAvgBadge = document.getElementById('chart-avg-badge');
+    const hoursChartCanvas = document.getElementById('hours-chart');
+    const streakBadge = document.getElementById('streak-badge');
+    const exportBtn = document.getElementById('export-btn');
+    const quickBackupBtn = document.getElementById('quick-backup-btn');
+    const lastBackupLabel = document.getElementById('last-backup-label');
+    const pdfBtn = document.getElementById('pdf-btn');
+    const quickPdfBtn = document.getElementById('quick-pdf-btn');
+    const importInput = document.getElementById('import-input');
+    const backupStatus = document.getElementById('backup-status');
+    const backlogForm = document.getElementById('backlog-form');
+    const backlogSubject = document.getElementById('backlog-subject');
+    const backlogInput = document.getElementById('backlog-input');
+    const backlogList = document.getElementById('backlog-list');
+    const backlogEmpty = document.getElementById('backlog-empty');
+    const backlogStats = document.getElementById('backlog-stats');
+
+    function switchTab(tabId) {
+      activeTab = tabId;
+      document.querySelectorAll('.tab-panel').forEach(panel => {
+        panel.classList.toggle('hidden', panel.id !== `tab-${tabId}`);
+      });
+      document.querySelectorAll('.nav-tab-btn').forEach(btn => {
+        const active = btn.dataset.tab === tabId;
+        btn.className = active
+          ? 'nav-tab-btn px-4 py-1.5 rounded-lg text-xs font-semibold transition bg-indigo-600 text-white'
+          : 'nav-tab-btn px-4 py-1.5 rounded-lg text-xs font-semibold transition text-slate-300 hover:bg-slate-800';
+      });
+      document.querySelectorAll('.mobile-tab-btn').forEach(btn => {
+        const active = btn.dataset.tab === tabId;
+        btn.className = active
+          ? 'mobile-tab-btn flex flex-col items-center justify-center py-1.5 rounded-xl text-[11px] font-bold text-indigo-600 bg-indigo-50'
+          : 'mobile-tab-btn flex flex-col items-center justify-center py-1.5 rounded-xl text-[11px] font-semibold text-slate-500';
+      });
+      if (tabId === 'analytics' || tabId === 'calendar') {
+        renderCalendarAndChart();
+        if (hoursChart) hoursChart.resize();
+      }
+    }
+
+    function formatDisplayDate(iso) {
+      if (iso === getLocalTodayISO()) return `Today (${iso})`;
+      const [y, m, d] = iso.split('-').map(Number);
+      const dt = new Date(y, m - 1, d);
+      return dt.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+    }
+
+    function shiftDate(iso, deltaDays) {
+      const [y, m, d] = iso.split('-').map(Number);
+      const dt = new Date(y, m - 1, d + deltaDays);
+      const ny = dt.getFullYear();
+      const nm = String(dt.getMonth() + 1).padStart(2, '0');
+      const nd = String(dt.getDate()).padStart(2, '0');
+      return `${ny}-${nm}-${nd}`;
+    }
+
+    function syncCalendarMonthToSelected() {
+      viewYear = Number(selectedDate.slice(0, 4));
+      viewMonth = Number(selectedDate.slice(5, 7)) - 1;
+    }
+
+    function isTaskChecked(date, subjectId, taskId) {
+      return Boolean(state.dailyTasks[date]?.[subjectId]?.[taskId]);
+    }
+
+    function getTaskTime(date, subjectId, taskId) {
+      const entry = state.taskTimes?.[date]?.[subjectId]?.[taskId];
+      return {
+        plan: entry?.plan || '',
+        spent: entry?.spent || '',
+        planUnit: entry?.planUnit === 'h' ? 'h' : 'm',
+        spentUnit: entry?.spentUnit === 'h' ? 'h' : 'm'
+      };
+    }
+
+    function setTaskTime(date, subjectId, taskId, field, value) {
+      if (!state.taskTimes) state.taskTimes = {};
+      if (!state.taskTimes[date]) state.taskTimes[date] = {};
+      if (!state.taskTimes[date][subjectId]) state.taskTimes[date][subjectId] = {};
+      const prev = getTaskTime(date, subjectId, taskId);
+      state.taskTimes[date][subjectId][taskId] = { ...prev, [field]: value };
+      saveState();
+      renderDailyTimeSummaries();
+    }
+
+    function getSubjectTime(date, subjectId) {
+      const entry = state.subjectTimes?.[date]?.[subjectId];
+      return {
+        plan: entry?.plan || '',
+        spent: entry?.spent || '',
+        planUnit: entry?.planUnit === 'm' ? 'm' : 'h',
+        spentUnit: entry?.spentUnit === 'm' ? 'm' : 'h'
+      };
+    }
+
+    function setSubjectTime(date, subjectId, field, value) {
+      if (!state.subjectTimes) state.subjectTimes = {};
+      if (!state.subjectTimes[date]) state.subjectTimes[date] = {};
+      const prev = getSubjectTime(date, subjectId);
+      state.subjectTimes[date][subjectId] = { ...prev, [field]: value };
+      saveState();
+    }
+
+    function toggleSubjectTimeUnit(date, subjectId, unitField) {
+      const prev = getSubjectTime(date, subjectId);
+      const nextUnit = prev[unitField] === 'h' ? 'm' : 'h';
+      setSubjectTime(date, subjectId, unitField, nextUnit);
+      renderDaily();
+    }
+
+    function toggleTaskTimeUnit(date, subjectId, taskId, unitField) {
+      const prev = getTaskTime(date, subjectId, taskId);
+      const nextUnit = prev[unitField] === 'h' ? 'm' : 'h';
+      setTaskTime(date, subjectId, taskId, unitField, nextUnit);
+      renderDaily();
+    }
+
+    function toMinutes(val, unit) {
+      const n = parseFloat(val) || 0;
+      if (n <= 0) return 0;
+      return unit === 'h' ? n * 60 : n;
+    }
+
+    function formatMins(mins) {
+      const m = Math.round(Number(mins) || 0);
+      if (m <= 0) return '0m';
+      const h = Math.floor(m / 60);
+      const rem = m % 60;
+      if (h === 0) return `${rem}m`;
+      if (rem === 0) return `${h}h`;
+      return `${h}h ${rem}m`;
+    }
+
+    function renderDailyTimeSummaries() {
+      getSubjects().forEach(sub => {
+        let subPlan = 0;
+        let subSpent = 0;
+        getSubjectTasks(sub.id).forEach(task => {
+          const t = getTaskTime(selectedDate, sub.id, task.id);
+          subPlan += toMinutes(t.plan, t.planUnit);
+          subSpent += toMinutes(t.spent, t.spentUnit);
+        });
+        const planEl = document.querySelector(`[data-subject-plan="${sub.id}"]`);
+        const spentEl = document.querySelector(`[data-subject-spent="${sub.id}"]`);
+        if (planEl) planEl.textContent = formatMins(subPlan);
+        if (spentEl) spentEl.textContent = formatMins(subSpent);
+      });
+    }
+
+    function toggleTask(date, subjectId, taskId) {
+      if (!state.dailyTasks[date]) state.dailyTasks[date] = {};
+      if (!state.dailyTasks[date][subjectId]) state.dailyTasks[date][subjectId] = {};
+      state.dailyTasks[date][subjectId][taskId] = !state.dailyTasks[date][subjectId][taskId];
+      saveState();
+      renderDaily();
+    }
+
+    function getRoutineEntry(date, id) {
+      return state.dailyRoutine[date]?.[id] || { done: false, value: '' };
+    }
+
+    function updateRoutineEntry(date, id, patch) {
+      if (!state.dailyRoutine[date]) state.dailyRoutine[date] = {};
+      const prev = state.dailyRoutine[date][id] || { done: false, value: '' };
+      state.dailyRoutine[date][id] = { ...prev, ...patch };
+      saveState();
+      renderRoutine();
+      renderCalendarAndChart();
+    }
+
+    function renderDaily() {
+      datePicker.value = selectedDate;
+      selectedDateLabel.textContent = formatDisplayDate(selectedDate);
+
+      const subjects = getSubjects();
+      syncBacklogSubjectOptions(subjects);
+      let totalTasks = 0;
+      let completedTasks = 0;
+
+      subjectsGrid.innerHTML = subjects.map(sub => {
+        const subTasks = getSubjectTasks(sub.id);
+        const activeToday = isSubjectActive(selectedDate, sub.id);
+        if (activeToday) {
+          totalTasks += subTasks.length;
+        }
+        const subTime = getSubjectTime(selectedDate, sub.id);
+        let subDone = 0;
+        const tasksHtml = subTasks.map(task => {
+          const checked = isTaskChecked(selectedDate, sub.id, task.id);
+          if (checked) {
+            if (activeToday) completedTasks++;
+            subDone++;
+          }
+          const isEditing = editingTask && editingTask.subjectId === sub.id && editingTask.taskId === task.id;
+          if (isEditing) {
+            return `
+              <div class="flex items-center gap-1.5 p-2 rounded-xl border border-indigo-300 bg-indigo-50/50">
+                <input
+                  type="text"
+                  class="edit-task-input flex-1 min-w-0 bg-white border border-indigo-300 rounded-lg px-2 py-1 text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  data-subject="${sub.id}"
+                  data-task="${task.id}"
+                  value="${escapeHtml(task.label)}"
+                />
+                <button type="button" data-save-task="${task.id}" data-subject="${sub.id}" class="px-2 py-1 rounded-lg bg-indigo-600 text-white text-[11px] font-bold hover:bg-indigo-700 transition">Save</button>
+              </div>
+            `;
+          }
+          const tTime = getTaskTime(selectedDate, sub.id, task.id);
+          return `
+            <div class="group p-2 rounded-xl border border-slate-100 hover:bg-slate-50 transition space-y-1.5">
+              <div class="flex items-center justify-between gap-1.5">
+                <label class="flex items-center gap-2.5 flex-1 min-w-0 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    class="task-checkbox w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300 shrink-0"
+                    data-subject="${sub.id}"
+                    data-task="${task.id}"
+                    ${checked ? 'checked' : ''}
+                  />
+                  <span class="text-sm font-medium text-slate-800 select-none truncate">${escapeHtml(task.label)}</span>
+                </label>
+                <div class="flex items-center gap-0.5 shrink-0">
+                  <button type="button" data-edit-task="${task.id}" data-subject="${sub.id}" title="Rename task" aria-label="Rename task" class="px-1.5 py-0.5 rounded text-xs text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition">&#9998;</button>
+                  <button type="button" data-remove-task="${task.id}" data-subject="${sub.id}" title="Remove task" aria-label="Remove task" class="px-1.5 py-0.5 rounded text-xs font-bold text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition">&times;</button>
+                </div>
+              </div>
+              <div class="flex flex-wrap items-center gap-2 pl-6 text-[10px] text-slate-500">
+                <div class="inline-flex items-center gap-1">
+                  <span>Plan</span>
+                  <input type="number" min="0" step="any" placeholder="0" data-time-field="plan" data-subject="${sub.id}" data-task="${task.id}" value="${escapeHtml(tTime.plan || '')}" class="task-time-input w-11 bg-white border border-slate-200 rounded px-1.5 py-0.5 text-[11px] font-semibold text-slate-800 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
+                  <button type="button" data-toggle-unit="planUnit" data-subject="${sub.id}" data-task="${task.id}" title="Click to switch between m and h" class="px-1.5 py-0.5 rounded bg-slate-200 hover:bg-indigo-100 text-slate-700 hover:text-indigo-700 font-bold transition">${tTime.planUnit}</button>
+                </div>
+                <div class="inline-flex items-center gap-1">
+                  <span>Spent</span>
+                  <input type="number" min="0" step="any" placeholder="0" data-time-field="spent" data-subject="${sub.id}" data-task="${task.id}" value="${escapeHtml(tTime.spent || '')}" class="task-time-input w-11 bg-white border border-slate-200 rounded px-1.5 py-0.5 text-[11px] font-semibold text-emerald-700 focus:outline-none focus:ring-1 focus:ring-emerald-500" />
+                  <button type="button" data-toggle-unit="spentUnit" data-subject="${sub.id}" data-task="${task.id}" title="Click to switch between m and h" class="px-1.5 py-0.5 rounded bg-slate-200 hover:bg-emerald-100 text-slate-700 hover:text-emerald-700 font-bold transition">${tTime.spentUnit}</button>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        const isEditingSub = editingSubjectId === sub.id;
+        const titleBlockHtml = isEditingSub
+          ? `<div class="flex items-center gap-1 flex-1 min-w-0">
+               <input type="text" class="edit-subject-input flex-1 min-w-0 bg-white border border-indigo-300 rounded-lg px-2 py-1 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500" data-subject-id="${sub.id}" value="${escapeHtml(sub.name)}" />
+               <button type="button" data-save-subject="${sub.id}" class="px-2 py-1 rounded-lg bg-indigo-600 text-white text-[11px] font-bold hover:bg-indigo-700 transition">Save</button>
+             </div>`
+          : `<div class="flex items-center gap-1.5 min-w-0 flex-1">
+               <h3 class="text-base font-bold text-slate-900 truncate">${escapeHtml(sub.name)}</h3>
+               <button type="button" data-edit-subject="${sub.id}" title="Rename subject" aria-label="Rename subject" class="px-1 py-0.5 rounded text-xs text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition">&#9998;</button>
+               <button type="button" data-remove-subject="${sub.id}" title="Remove subject" aria-label="Remove subject" class="px-1 py-0.5 rounded text-xs font-bold text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition">&times;</button>
+             </div>`;
+
+        return `
+          <div class="bg-white rounded-2xl border border-slate-200 border-t-4 ${sub.border} p-4 shadow-sm flex flex-col justify-between gap-3 transition ${activeToday ? '' : 'opacity-55 bg-slate-50'}">
+            <div>
+              <div class="flex items-center justify-between gap-2 mb-2">
+                ${titleBlockHtml}
+                <span class="text-xs font-bold px-2 py-0.5 rounded-full shrink-0 ${sub.badge}">${activeToday ? `${subDone} / ${subTasks.length}` : 'Off'}</span>
+              </div>
+              <div class="mb-3">
+                <label class="inline-flex items-center gap-1.5 text-[11px] font-semibold cursor-pointer ${activeToday ? 'text-emerald-700' : 'text-slate-400'}" title="Tick karein agar aaj is subject ka turn hai">
+                  <input type="checkbox" class="subject-turn-checkbox w-3.5 h-3.5 rounded text-emerald-600 focus:ring-emerald-500 border-slate-300" data-subject-turn="${sub.id}" ${activeToday ? 'checked' : ''} />
+                  <span>${activeToday ? "Today's Turn" : 'Off Today'}</span>
+                </label>
+              </div>
+              <div class="space-y-2">
+                ${tasksHtml || '<p class="text-xs text-slate-400 py-2 text-center">Koi task nahi hai. Neeche se add karein.</p>'}
+              </div>
+            </div>
+            <div class="space-y-2 pt-2 border-t border-slate-100">
+              <div class="flex flex-wrap items-center justify-between gap-2 px-2.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-[11px] text-slate-600">
+                <div class="inline-flex items-center gap-1">
+                  <span class="font-bold">Plan</span>
+                  <input type="number" min="0" step="any" placeholder="0" data-sub-time-field="plan" data-subject="${sub.id}" value="${escapeHtml(subTime.plan || '')}" class="subject-time-input w-12 bg-white border border-slate-200 rounded px-1.5 py-0.5 text-xs font-bold text-slate-900 focus:outline-none focus:ring-1 focus:ring-indigo-500" />
+                  <button type="button" data-toggle-sub-unit="planUnit" data-subject="${sub.id}" title="Switch between h and m" class="px-1.5 py-0.5 rounded bg-slate-200 hover:bg-indigo-100 text-slate-700 hover:text-indigo-700 font-bold transition">${subTime.planUnit}</button>
+                </div>
+                <div class="inline-flex items-center gap-1">
+                  <span class="font-bold text-emerald-700">Spent</span>
+                  <input type="number" min="0" step="any" placeholder="0" data-sub-time-field="spent" data-subject="${sub.id}" value="${escapeHtml(subTime.spent || '')}" class="subject-time-input w-12 bg-white border border-slate-200 rounded px-1.5 py-0.5 text-xs font-bold text-emerald-700 focus:outline-none focus:ring-1 focus:ring-emerald-500" />
+                  <button type="button" data-toggle-sub-unit="spentUnit" data-subject="${sub.id}" title="Switch between h and m" class="px-1.5 py-0.5 rounded bg-slate-200 hover:bg-emerald-100 text-slate-700 hover:text-emerald-700 font-bold transition">${subTime.spentUnit}</button>
+                </div>
+              </div>
+              <form class="add-subject-task-form flex items-center gap-1.5" data-subject="${sub.id}">
+              <input type="text" placeholder="+ Naya task likhein..." class="flex-1 min-w-0 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+              <button type="submit" class="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition shrink-0">Add</button>
+              </form>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      const pct = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+      dailyProgressText.textContent = `${completedTasks} / ${totalTasks} Completed (${pct}%)`;
+      dailyProgressBar.style.width = `${pct}%`;
+      renderDailyTimeSummaries();
+      renderRoutine();
+      renderCalendarAndChart();
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function renderRoutine() {
+      const items = getRoutineItems();
+      let ticked = 0;
+      routineGrid.innerHTML = items.map(item => {
+        const entry = getRoutineEntry(selectedDate, item.id);
+        if (entry.done) ticked++;
+
+        let inputHtml = '';
+        if (item.type === 'time') {
+          inputHtml = `<input type="time" data-routine-input="${item.id}" value="${escapeHtml(entry.value || '')}" class="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500" />`;
+        } else if (item.type === 'number') {
+          inputHtml = `<input type="number" step="0.5" min="0" max="24" placeholder="e.g. 8.5" data-routine-input="${item.id}" value="${escapeHtml(entry.value || '')}" class="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500" />`;
+        }
+
+        const isEditing = editingRoutineId === item.id;
+        const headerHtml = isEditing
+          ? `<div class="flex items-center gap-1">
+               <input type="text" class="edit-routine-input flex-1 min-w-0 bg-white border border-indigo-300 rounded-lg px-2 py-1 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500" data-routine-id="${item.id}" value="${escapeHtml(item.label)}" />
+               <button type="button" data-save-routine="${item.id}" class="px-2 py-1 rounded-lg bg-indigo-600 text-white text-[11px] font-bold hover:bg-indigo-700 transition">Save</button>
+             </div>`
+          : `<div class="flex items-center justify-between gap-1">
+               <label class="flex items-center gap-2 cursor-pointer flex-1 min-w-0">
+                 <input type="checkbox" class="routine-checkbox w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300 shrink-0" data-routine-id="${item.id}" ${entry.done ? 'checked' : ''} />
+                 <span class="text-xs font-bold truncate ${entry.done ? 'text-indigo-900' : 'text-slate-700'}">${escapeHtml(item.label)}</span>
+               </label>
+               <div class="flex items-center gap-0.5 shrink-0">
+                 <button type="button" data-edit-routine="${item.id}" title="Rename" aria-label="Rename routine item" class="px-1 py-0.5 rounded text-xs text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition">&#9998;</button>
+                 <button type="button" data-remove-routine="${item.id}" title="Remove" aria-label="Remove routine item" class="px-1 py-0.5 rounded text-xs font-bold text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition">&times;</button>
+               </div>
+             </div>`;
+
+        return `
+          <div class="p-3 rounded-xl border ${entry.done ? 'border-indigo-300 bg-indigo-50/60' : 'border-slate-200 bg-slate-50/70'} space-y-2 transition flex flex-col justify-between">
+            ${headerHtml}
+            ${inputHtml}
+          </div>
+        `;
+      }).join('');
+
+      const hrsVal = getRoutineEntry(selectedDate, 'effective_hrs').value;
+      const hrsText = hrsVal ? `${hrsVal} hrs` : '0 hrs';
+      routineStats.textContent = `${ticked} / ${items.length} Ticked • ${hrsText}`;
+    }
+
+    function syncBacklogSubjectOptions(subjects) {
+      const current = backlogSubject.value;
+      backlogSubject.innerHTML = subjects.map(s => `<option value="${escapeHtml(s.name)}">${escapeHtml(s.name)}</option>`).join('');
+      if (subjects.some(s => s.name === current)) {
+        backlogSubject.value = current;
+      }
+    }
+
+    function getDateCompletionCount(dateIso) {
+      let count = 0;
+      getSubjects().forEach(sub => {
+        if (!isSubjectActive(dateIso, sub.id)) return;
+        getSubjectTasks(sub.id).forEach(task => {
+          if (isTaskChecked(dateIso, sub.id, task.id)) count++;
+        });
+      });
+      return count;
+    }
+
+    function getDateTotalTasks(dateIso) {
+      return getSubjects().reduce((sum, sub) => {
+        if (!isSubjectActive(dateIso, sub.id)) return sum;
+        return sum + getSubjectTasks(sub.id).length;
+      }, 0);
+    }
+
+    function isDateActive(dateIso) {
+      if (getDateCompletionCount(dateIso) > 0) return true;
+      const eff = getRoutineEntry(dateIso, 'effective_hrs');
+      return Boolean(eff.done && eff.value && parseFloat(eff.value) > 0);
+    }
+
+    function updateStreak() {
+      let streak = 0;
+      let cursor = getLocalTodayISO();
+      if (!isDateActive(cursor)) {
+        cursor = shiftDate(cursor, -1);
+      }
+      while (isDateActive(cursor) && streak < 3650) {
+        streak++;
+        cursor = shiftDate(cursor, -1);
+      }
+      streakBadge.textContent = `${streak} Day Streak`;
+    }
+
+    function renderCalendarAndChart() {
+      updateStreak();
+      const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+      calendarMonthLabel.textContent = `${monthNames[viewMonth]} ${viewYear}`;
+
+      const firstDayOfWeek = new Date(viewYear, viewMonth, 1).getDay();
+      const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+      
+
+      let cellsHtml = '';
+      for (let i = 0; i < firstDayOfWeek; i++) {
+        cellsHtml += '<div class="h-12 rounded-xl bg-slate-50/60"></div>';
+      }
+
+      const labels = [];
+      const tickedHoursData = [];
+      let totalMonthHours = 0;
+      let activeDays = 0;
+
+      for (let day = 1; day <= daysInMonth; day++) {
+        const mm = String(viewMonth + 1).padStart(2, '0');
+        const dd = String(day).padStart(2, '0');
+        const dateIso = `${viewYear}-${mm}-${dd}`;
+        const doneCount = getDateCompletionCount(dateIso);
+        const totalTasksPerDay = getDateTotalTasks(dateIso);
+        const effEntry = getRoutineEntry(dateIso, 'effective_hrs');
+        const hrsNum = effEntry.done && effEntry.value ? parseFloat(effEntry.value) : 0;
+        const validHrs = Number.isFinite(hrsNum) && hrsNum > 0 ? hrsNum : 0;
+
+        labels.push(String(day));
+        tickedHoursData.push(validHrs);
+        if (validHrs > 0) {
+          totalMonthHours += validHrs;
+          activeDays++;
+        }
+
+        let bgClass = 'bg-slate-100 text-slate-700 hover:bg-slate-200';
+        if (totalTasksPerDay > 0 && doneCount === totalTasksPerDay) {
+          bgClass = 'bg-emerald-100 text-emerald-900 hover:bg-emerald-200';
+        } else if (doneCount > 0) {
+          bgClass = 'bg-amber-100 text-amber-900 hover:bg-amber-200';
+        }
+
+        const isSelected = dateIso === selectedDate ? 'ring-2 ring-indigo-600 ring-offset-1' : '';
+        const hrsBadge = validHrs > 0
+          ? `<span class="text-[10px] font-bold text-indigo-700 leading-none">${validHrs}h</span>`
+          : `<span class="text-[10px] text-slate-400 leading-none">${doneCount}/${totalTasksPerDay}</span>`;
+
+        cellsHtml += `
+          <button type="button" data-cal-date="${dateIso}" class="h-12 rounded-xl ${bgClass} ${isSelected} flex flex-col items-center justify-center gap-0.5 transition">
+            <span class="text-xs font-bold leading-none">${day}</span>
+            ${hrsBadge}
+          </button>
+        `;
+      }
+
+      calendarGrid.innerHTML = cellsHtml;
+      monthSummaryBadge.textContent = `${totalMonthHours.toFixed(1).replace(/\.0$/, '')} hrs this month`;
+      const avgHrs = activeDays > 0 ? (totalMonthHours / activeDays).toFixed(1) : '0';
+      chartAvgBadge.textContent = `Avg: ${avgHrs} hrs/day`;
+
+      if (typeof Chart !== 'undefined') {
+        if (hoursChart) {
+          hoursChart.data.labels = labels;
+          hoursChart.data.datasets[0].data = tickedHoursData;
+          hoursChart.update();
+        } else {
+          hoursChart = new Chart(hoursChartCanvas.getContext('2d'), {
+            type: 'bar',
+            data: {
+              labels,
+              datasets: [{
+                label: 'Effective Hours',
+                data: tickedHoursData,
+                backgroundColor: 'rgba(79, 70, 229, 0.85)',
+                borderColor: 'rgba(67, 56, 202, 1)',
+                borderWidth: 1,
+                borderRadius: 6
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: { display: false },
+                tooltip: {
+                  callbacks: {
+                    title: (items) => `Date: ${items[0].label} ${monthNames[viewMonth]}`,
+                    label: (item) => `Effective Study: ${item.raw} hrs`
+                  }
+                }
+              },
+              scales: {
+                x: {
+                  grid: { display: false },
+                  ticks: { font: { size: 10 } }
+                },
+                y: {
+                  beginAtZero: true,
+                  suggestedMax: 12,
+                  title: { display: true, text: 'Hours', font: { size: 11 } }
+                }
+              }
+            }
+          });
+        }
+      }
+    }
+
+    function renderBacklogs() {
+      const pendingCount = state.backlogs.filter(b => !b.done).length;
+      const doneCount = state.backlogs.filter(b => b.done).length;
+      backlogStats.textContent = `${pendingCount} Pending • ${doneCount} Done`;
+
+      const filtered = state.backlogs.filter(item => {
+        if (backlogFilter === 'pending') return !item.done;
+        if (backlogFilter === 'done') return item.done;
+        return true;
+      });
+
+      if (filtered.length === 0) {
+        backlogList.innerHTML = '';
+        backlogEmpty.classList.remove('hidden');
+      } else {
+        backlogEmpty.classList.add('hidden');
+        const badgeMap = {
+          Physics: 'bg-blue-50 text-blue-700 border border-blue-200',
+          Chemistry: 'bg-violet-50 text-violet-700 border border-violet-200',
+          Zoology: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
+          Botany: 'bg-teal-50 text-teal-700 border border-teal-200'
+        };
+
+        backlogList.innerHTML = filtered.map(item => `
+          <li class="flex items-center justify-between gap-3 p-3 rounded-xl border border-slate-200 bg-slate-50/70">
+            <label class="flex items-center gap-3 flex-1 cursor-pointer min-w-0">
+              <input
+                type="checkbox"
+                class="backlog-toggle w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500 border-slate-300 shrink-0"
+                data-id="${item.id}"
+                ${item.done ? 'checked' : ''}
+              />
+              <span class="text-xs font-bold px-2 py-0.5 rounded-full shrink-0 ${badgeMap[item.subject] || 'bg-slate-200 text-slate-700'}">
+                ${escapeHtml(item.subject)}
+              </span>
+              <span class="text-sm font-medium truncate ${item.done ? 'line-through text-slate-400' : 'text-slate-800'}">
+                ${escapeHtml(item.text)}
+              </span>
+            </label>
+            <button
+              type="button"
+              data-delete-id="${item.id}"
+              aria-label="Delete backlog item"
+              class="text-xs text-slate-400 hover:text-rose-600 font-bold px-2 py-1 rounded-lg hover:bg-rose-50 transition shrink-0"
+            >
+              Delete
+            </button>
+          </li>
+        `).join('');
+      }
+
+      document.querySelectorAll('.filter-btn').forEach(btn => {
+        const active = btn.dataset.filter === backlogFilter;
+        btn.className = active
+          ? 'filter-btn px-3 py-1.5 rounded-lg bg-slate-900 text-white transition'
+          : 'filter-btn px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition';
+      });
+    }
+
+    // Tab Navigation Listeners
+    document.querySelectorAll('[data-tab]').forEach(btn => {
+      btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+    });
+
+    // Event Listeners
+    subjectsGrid.addEventListener('change', e => {
+      if (e.target.classList.contains('task-checkbox')) {
+        toggleTask(selectedDate, e.target.dataset.subject, e.target.dataset.task);
+      } else if (e.target.classList.contains('subject-turn-checkbox')) {
+        setSubjectActive(selectedDate, e.target.dataset.subjectTurn, e.target.checked);
+      }
+    });
+
+    subjectsGrid.addEventListener('input', e => {
+      if (e.target.classList.contains('task-time-input')) {
+        setTaskTime(selectedDate, e.target.dataset.subject, e.target.dataset.task, e.target.dataset.timeField, e.target.value);
+      } else if (e.target.classList.contains('subject-time-input')) {
+        setSubjectTime(selectedDate, e.target.dataset.subject, e.target.dataset.subTimeField, e.target.value);
+      }
+    });
+
+    function commitSubjectEdit(subjectId, newName) {
+      const trimmed = newName.trim();
+      if (trimmed) {
+        const list = getSubjects();
+        const target = list.find(s => s.id === subjectId);
+        if (target) target.name = trimmed;
+        saveState();
+      }
+      editingSubjectId = null;
+      renderDaily();
+    }
+
+    addSubjectForm.addEventListener('submit', e => {
+      e.preventDefault();
+      const name = newSubjectName.value.trim();
+      if (!name) return;
+      const list = getSubjects();
+      const preset = COLOR_PRESETS[list.length % COLOR_PRESETS.length];
+      const id = 'sub_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5);
+      list.push({ id, name, badge: preset.badge, border: preset.border });
+      if (!state.subjectTasks) state.subjectTasks = getDefaultSubjectTasks();
+      state.subjectTasks[id] = PHY_CHEM_TASKS.map(t => ({ ...t }));
+      newSubjectName.value = '';
+      saveState();
+      renderDaily();
+    });
+
+    function commitTaskEdit(subjectId, taskId, newLabel) {
+      const trimmed = newLabel.trim();
+      if (trimmed) {
+        const list = getSubjectTasks(subjectId);
+        const target = list.find(t => t.id === taskId);
+        if (target) target.label = trimmed;
+        saveState();
+      }
+      editingTask = null;
+      renderDaily();
+    }
+
+    subjectsGrid.addEventListener('click', e => {
+      const unitBtn = e.target.closest('[data-toggle-unit]');
+      if (unitBtn) {
+        toggleTaskTimeUnit(selectedDate, unitBtn.dataset.subject, unitBtn.dataset.task, unitBtn.dataset.toggleUnit);
+        return;
+      }
+      const subUnitBtn = e.target.closest('[data-toggle-sub-unit]');
+      if (subUnitBtn) {
+        toggleSubjectTimeUnit(selectedDate, subUnitBtn.dataset.subject, subUnitBtn.dataset.toggleSubUnit);
+        return;
+      }
+      const editSubBtn = e.target.closest('[data-edit-subject]');
+      if (editSubBtn) {
+        editingSubjectId = editSubBtn.dataset.editSubject;
+        renderDaily();
+        const input = subjectsGrid.querySelector('.edit-subject-input');
+        if (input) {
+          input.focus();
+          input.select();
+        }
+        return;
+      }
+
+      const saveSubBtn = e.target.closest('[data-save-subject]');
+      if (saveSubBtn) {
+        const input = subjectsGrid.querySelector('.edit-subject-input');
+        commitSubjectEdit(saveSubBtn.dataset.saveSubject, input ? input.value : '');
+        return;
+      }
+
+      const removeSubBtn = e.target.closest('[data-remove-subject]');
+      if (removeSubBtn) {
+        const subId = removeSubBtn.dataset.removeSubject;
+        state.subjects = getSubjects().filter(s => s.id !== subId);
+        saveState();
+        renderDaily();
+        return;
+      }
+
+      const editBtn = e.target.closest('[data-edit-task]');
+      if (editBtn) {
+        editingTask = { subjectId: editBtn.dataset.subject, taskId: editBtn.dataset.editTask };
+        renderDaily();
+        const input = subjectsGrid.querySelector('.edit-task-input');
+        if (input) {
+          input.focus();
+          input.select();
+        }
+        return;
+      }
+
+      const saveBtn = e.target.closest('[data-save-task]');
+      if (saveBtn) {
+        const input = subjectsGrid.querySelector('.edit-task-input');
+        commitTaskEdit(saveBtn.dataset.subject, saveBtn.dataset.saveTask, input ? input.value : '');
+        return;
+      }
+
+      const removeBtn = e.target.closest('[data-remove-task]');
+      if (removeBtn) {
+        const subId = removeBtn.dataset.subject;
+        const taskId = removeBtn.dataset.removeTask;
+        state.subjectTasks[subId] = getSubjectTasks(subId).filter(t => t.id !== taskId);
+        saveState();
+        renderDaily();
+      }
+    });
+
+    subjectsGrid.addEventListener('keydown', e => {
+      if (e.target.classList.contains('edit-subject-input')) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          commitSubjectEdit(e.target.dataset.subjectId, e.target.value);
+        } else if (e.key === 'Escape') {
+          editingSubjectId = null;
+          renderDaily();
+        }
+        return;
+      }
+      if (e.target.classList.contains('edit-task-input')) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          commitTaskEdit(e.target.dataset.subject, e.target.dataset.task, e.target.value);
+        } else if (e.key === 'Escape') {
+          editingTask = null;
+          renderDaily();
+        }
+      }
+    });
+
+    subjectsGrid.addEventListener('submit', e => {
+      const form = e.target.closest('.add-subject-task-form');
+      if (!form) return;
+      e.preventDefault();
+      const input = form.querySelector('input');
+      const label = input ? input.value.trim() : '';
+      if (!label) return;
+      const subId = form.dataset.subject;
+      const list = getSubjectTasks(subId);
+      list.push({
+        id: 'custom_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5),
+        label
+      });
+      saveState();
+      renderDaily();
+    });
+
+    routineGrid.addEventListener('change', e => {
+      if (e.target.classList.contains('routine-checkbox')) {
+        updateRoutineEntry(selectedDate, e.target.dataset.routineId, { done: e.target.checked });
+      } else if (e.target.dataset.routineInput) {
+        updateRoutineEntry(selectedDate, e.target.dataset.routineInput, { value: e.target.value });
+      }
+    });
+
+    function commitRoutineEdit(id, newLabel) {
+      const trimmed = newLabel.trim();
+      if (trimmed) {
+        const items = getRoutineItems();
+        const target = items.find(i => i.id === id);
+        if (target) target.label = trimmed;
+        saveState();
+      }
+      editingRoutineId = null;
+      renderRoutine();
+    }
+
+    routineGrid.addEventListener('click', e => {
+      const editBtn = e.target.closest('[data-edit-routine]');
+      if (editBtn) {
+        editingRoutineId = editBtn.dataset.editRoutine;
+        renderRoutine();
+        const input = routineGrid.querySelector('.edit-routine-input');
+        if (input) {
+          input.focus();
+          input.select();
+        }
+        return;
+      }
+
+      const saveBtn = e.target.closest('[data-save-routine]');
+      if (saveBtn) {
+        const input = routineGrid.querySelector('.edit-routine-input');
+        commitRoutineEdit(saveBtn.dataset.saveRoutine, input ? input.value : '');
+        return;
+      }
+
+      const removeBtn = e.target.closest('[data-remove-routine]');
+      if (removeBtn) {
+        const id = removeBtn.dataset.removeRoutine;
+        state.routineItems = getRoutineItems().filter(i => i.id !== id);
+        saveState();
+        renderRoutine();
+      }
+    });
+
+    routineGrid.addEventListener('keydown', e => {
+      if (e.target.classList.contains('edit-routine-input')) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          commitRoutineEdit(e.target.dataset.routineId, e.target.value);
+        } else if (e.key === 'Escape') {
+          editingRoutineId = null;
+          renderRoutine();
+        }
+      }
+    });
+
+    addRoutineForm.addEventListener('submit', e => {
+      e.preventDefault();
+      const label = newRoutineLabel.value.trim();
+      if (!label) return;
+      const items = getRoutineItems();
+      items.push({
+        id: 'routine_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5),
+        label,
+        type: newRoutineType.value
+      });
+      newRoutineLabel.value = '';
+      saveState();
+      renderRoutine();
+    });
+
+    datePicker.addEventListener('change', e => {
+      if (e.target.value) {
+        selectedDate = e.target.value;
+        syncCalendarMonthToSelected();
+        renderDaily();
+      }
+    });
+
+    document.getElementById('prev-day-btn').addEventListener('click', () => {
+      selectedDate = shiftDate(selectedDate, -1);
+      syncCalendarMonthToSelected();
+      renderDaily();
+    });
+
+    document.getElementById('next-day-btn').addEventListener('click', () => {
+      selectedDate = shiftDate(selectedDate, 1);
+      syncCalendarMonthToSelected();
+      renderDaily();
+    });
+
+    document.getElementById('today-btn').addEventListener('click', () => {
+      selectedDate = getLocalTodayISO();
+      syncCalendarMonthToSelected();
+      renderDaily();
+    });
+
+    document.getElementById('prev-month-btn').addEventListener('click', () => {
+      viewMonth--;
+      if (viewMonth < 0) {
+        viewMonth = 11;
+        viewYear--;
+      }
+      renderCalendarAndChart();
+    });
+
+    document.getElementById('next-month-btn').addEventListener('click', () => {
+      viewMonth++;
+      if (viewMonth > 11) {
+        viewMonth = 0;
+        viewYear++;
+      }
+      renderCalendarAndChart();
+    });
+
+    calendarGrid.addEventListener('click', e => {
+      const btn = e.target.closest('[data-cal-date]');
+      if (btn) {
+        selectedDate = btn.dataset.calDate;
+        renderDaily();
+        switchTab('today');
+      }
+    });
+
+    backlogForm.addEventListener('submit', e => {
+      e.preventDefault();
+      const text = backlogInput.value.trim();
+      if (!text) return;
+      state.backlogs.unshift({
+        id: String(Date.now()) + Math.random().toString(36).slice(2, 6),
+        subject: backlogSubject.value,
+        text,
+        done: false
+      });
+      backlogInput.value = '';
+      saveState();
+      renderBacklogs();
+    });
+
+    backlogList.addEventListener('change', e => {
+      if (e.target.classList.contains('backlog-toggle')) {
+        const id = e.target.dataset.id;
+        const item = state.backlogs.find(b => b.id === id);
+        if (item) {
+          item.done = e.target.checked;
+          saveState();
+          renderBacklogs();
+        }
+      }
+    });
+
+    backlogList.addEventListener('click', e => {
+      const delId = e.target.dataset.deleteId;
+      if (delId) {
+        state.backlogs = state.backlogs.filter(b => b.id !== delId);
+        saveState();
+        renderBacklogs();
+      }
+    });
+
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        backlogFilter = btn.dataset.filter;
+        renderBacklogs();
+      });
+    });
+
+    function updateLastBackupLabel() {
+      if (state.lastBackupAt) {
+        lastBackupLabel.textContent = `Last backup: ${state.lastBackupAt}`;
+      } else {
+        lastBackupLabel.textContent = 'Last backup: Never';
+      }
+    }
+
+    function downloadBackup() {
+      const nowLabel = new Date().toLocaleString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+      state.lastBackupAt = nowLabel;
+      saveState();
+      updateLastBackupLabel();
+
+      const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `neet_tracker_backup_${getLocalTodayISO()}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+
+      const prevText = quickBackupBtn.innerHTML;
+      quickBackupBtn.innerHTML = '<span>&#10003; Saved</span>';
+      backupStatus.textContent = 'Saara data Downloads mein save ho gaya!';
+      setTimeout(() => {
+        quickBackupBtn.innerHTML = prevText;
+        backupStatus.textContent = '';
+      }, 2500);
+    }
+
+    exportBtn.addEventListener('click', downloadBackup);
+    quickBackupBtn.addEventListener('click', downloadBackup);
+
+    function pdfSafe(str) {
+      return String(str || '')
+        .replace(/[^\x20-\x7E]/g, ' ')
+        .replace(/\\/g, '\\\\')
+        .replace(/\(/g, '\\(')
+        .replace(/\)/g, '\\)');
+    }
+
+    function buildSimplePdf(pagesLines) {
+      const objects = [];
+      const addObj = (body) => {
+        objects.push(body);
+        return objects.length;
+      };
+
+      const fontRegId = addObj('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>');
+      const fontBoldId = addObj('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>');
+      const pagesId = addObj(''); // placeholder for Pages object
+      const pageIds = [];
+
+      pagesLines.forEach(ops => {
+        const stream = ops.join('\n');
+        const contentId = addObj(`<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`);
+        const pageId = addObj(
+          `<< /Type /Page /Parent ${pagesId} 0 R /MediaBox [0 0 595 842] ` +
+          `/Resources << /Font << /F1 ${fontRegId} 0 R /F2 ${fontBoldId} 0 R >> >> ` +
+          `/Contents ${contentId} 0 R >>`
+        );
+        pageIds.push(pageId);
+      });
+
+      objects[pagesId - 1] = `<< /Type /Pages /Kids [${pageIds.map(id => id + ' 0 R').join(' ')}] /Count ${pageIds.length} >>`;
+      const catalogId = addObj(`<< /Type /Catalog /Pages ${pagesId} 0 R >>`);
+
+      let pdf = '%PDF-1.4\n';
+      const offsets = [0];
+      objects.forEach((body, idx) => {
+        offsets.push(pdf.length);
+        pdf += `${idx + 1} 0 obj\n${body}\nendobj\n`;
+      });
+
+      const xrefPos = pdf.length;
+      pdf += `xref\n0 ${objects.length + 1}\n`;
+      pdf += '0000000000 65535 f \n';
+      for (let i = 1; i < offsets.length; i++) {
+        pdf += String(offsets[i]).padStart(10, '0') + ' 00000 n \n';
+      }
+      pdf += `trailer\n<< /Size ${objects.length + 1} /Root ${catalogId} 0 R >>\nstartxref\n${xrefPos}\n%%EOF`;
+      return new Blob([pdf], { type: 'application/pdf' });
+    }
+
+    function generatePdfReport() {
+      const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+      const monthTitle = `${monthNames[viewMonth]} ${viewYear}`;
+      const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+
+      const pages = [[]];
+      let cur = pages[0];
+      let y = 785;
+
+      const textOp = (font, size, x, yPos, txt, r = 0.06, g = 0.09, b = 0.16) => {
+        cur.push(`BT /${font} ${size} Tf ${r} ${g} ${b} rg ${x} ${yPos} Td (${pdfSafe(txt)}) Tj ET`);
+      };
+      const rectOp = (x, yPos, w, h, r, g, b) => {
+        cur.push(`${r} ${g} ${b} rg ${x} ${yPos} ${w} ${h} re f`);
+      };
+      const nextPageIfNeeded = (needed) => {
+        if (y - needed < 50) {
+          pages.push([]);
+          cur = pages[pages.length - 1];
+          y = 785;
+        }
+      };
+
+      // Header Banner
+      rectOp(40, y - 34, 515, 52, 0.06, 0.09, 0.16);
+      textOp('F2', 15, 54, y - 4, `NURA NEET Report - ${monthTitle}`, 1, 1, 1);
+      textOp('F1', 9.5, 54, y - 22, `Generated: ${getLocalTodayISO()}  |  ${streakBadge.textContent}`, 0.8, 0.84, 0.9);
+      y -= 58;
+
+      // Monthly Stats
+      let totalHours = 0;
+      let activeDays = 0;
+      const rows = [];
+      for (let d = 1; d <= daysInMonth; d++) {
+        const mm = String(viewMonth + 1).padStart(2, '0');
+        const dd = String(d).padStart(2, '0');
+        const dateIso = `${viewYear}-${mm}-${dd}`;
+        const done = getDateCompletionCount(dateIso);
+        const total = getDateTotalTasks(dateIso);
+        const eff = getRoutineEntry(dateIso, 'effective_hrs');
+        const hrs = eff.done && eff.value ? parseFloat(eff.value) : 0;
+        const validHrs = Number.isFinite(hrs) && hrs > 0 ? hrs : 0;
+        if (validHrs > 0) {
+          totalHours += validHrs;
+          activeDays++;
+        }
+        if (done > 0 || validHrs > 0) {
+          const wake = getRoutineEntry(dateIso, 'wake').value || '-';
+          const libIn = getRoutineEntry(dateIso, 'lib_in').value || '-';
+          const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+          rows.push({ dateIso, tasks: `${done}/${total} (${pct}%)`, hrs: validHrs > 0 ? `${validHrs} hrs` : '-', wake, libIn });
+        }
+      }
+
+      const avg = activeDays > 0 ? (totalHours / activeDays).toFixed(1) : '0';
+      textOp('F2', 10.5, 40, y, `Total Study Hours: ${totalHours.toFixed(1).replace(/\.0$/, '')} hrs   |   Active Days: ${activeDays}   |   Avg: ${avg} hrs/day`);
+      y -= 24;
+
+      // Table Header
+      rectOp(40, y - 5, 515, 19, 0.94, 0.96, 0.98);
+      textOp('F2', 9.5, 48, y + 1, 'Date', 0.2, 0.25, 0.33);
+      textOp('F2', 9.5, 160, y + 1, 'Tasks Done', 0.2, 0.25, 0.33);
+      textOp('F2', 9.5, 280, y + 1, 'Effective Hrs', 0.2, 0.25, 0.33);
+      textOp('F2', 9.5, 390, y + 1, 'Wake Up', 0.2, 0.25, 0.33);
+      textOp('F2', 9.5, 475, y + 1, 'Library In', 0.2, 0.25, 0.33);
+      y -= 20;
+
+      if (rows.length === 0) {
+        textOp('F1', 10, 48, y, 'Is mahine mein abhi koi entry log nahi hui hai.', 0.4, 0.45, 0.52);
+        y -= 22;
+      } else {
+        rows.forEach(r => {
+          nextPageIfNeeded(20);
+          textOp('F1', 9.5, 48, y, r.dateIso);
+          textOp('F1', 9.5, 160, y, r.tasks);
+          textOp('F1', 9.5, 280, y, r.hrs);
+          textOp('F1', 9.5, 390, y, r.wake);
+          textOp('F1', 9.5, 475, y, r.libIn);
+          y -= 17;
+        });
+      }
+
+      // Backlog Summary
+      y -= 14;
+      nextPageIfNeeded(40);
+      const pendingBacklogs = state.backlogs.filter(b => !b.done);
+      const doneBacklogs = state.backlogs.filter(b => b.done);
+      textOp('F2', 11.5, 40, y, `Backlog Summary (${pendingBacklogs.length} Pending, ${doneBacklogs.length} Done)`);
+      y -= 18;
+
+      if (pendingBacklogs.length === 0) {
+        textOp('F1', 10, 48, y, 'Koi pending backlog nahi hai.', 0.4, 0.45, 0.52);
+      } else {
+        pendingBacklogs.forEach((b, idx) => {
+          nextPageIfNeeded(18);
+          textOp('F1', 9.5, 48, y, `${idx + 1}. [${b.subject}] ${b.text}`.slice(0, 92));
+          y -= 15;
+        });
+      }
+
+      const pdfBlob = buildSimplePdf(pages);
+      const url = URL.createObjectURL(pdfBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      const mmStr = String(viewMonth + 1).padStart(2, '0');
+      a.download = `NEET_Report_${viewYear}-${mmStr}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+
+      const prevQuick = quickPdfBtn.innerHTML;
+      quickPdfBtn.innerHTML = '<span>&#10003; PDF</span>';
+      backupStatus.textContent = 'PDF report Downloads mein save ho gayi!';
+      setTimeout(() => {
+        quickPdfBtn.innerHTML = prevQuick;
+        backupStatus.textContent = '';
+      }, 2500);
+    }
+
+    pdfBtn.addEventListener('click', generatePdfReport);
+    quickPdfBtn.addEventListener('click', generatePdfReport);
+
+    importInput.addEventListener('change', e => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const parsed = JSON.parse(reader.result);
+          state = {
+            dailyTasks: parsed.dailyTasks || {},
+            dailyRoutine: parsed.dailyRoutine || {},
+            backlogs: Array.isArray(parsed.backlogs) ? parsed.backlogs : [],
+            subjectTasks: parsed.subjectTasks || null,
+            routineItems: Array.isArray(parsed.routineItems) ? parsed.routineItems : null,
+            activeSubjects: parsed.activeSubjects || {},
+            subjects: Array.isArray(parsed.subjects) ? parsed.subjects : null,
+            taskTimes: parsed.taskTimes || {},
+            subjectTimes: parsed.subjectTimes || {},
+            lastBackupAt: parsed.lastBackupAt || null
+          };
+          saveState();
+          renderDaily();
+          renderBacklogs();
+          updateLastBackupLabel();
+          backupStatus.textContent = 'Backup restored!';
+          setTimeout(() => { backupStatus.textContent = ''; }, 3000);
+        } catch (err) {
+          backupStatus.textContent = 'Invalid backup file.';
+          setTimeout(() => { backupStatus.textContent = ''; }, 3000);
+        }
+      };
+      reader.readAsText(file);
+      importInput.value = '';
+    });
+
+    // Initial render
+    switchTab('today');
+    renderDaily();
+    renderBacklogs();
+    updateLastBackupLabel();
+  </script>
+</body>
+</html>
